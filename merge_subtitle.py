@@ -1,13 +1,14 @@
 import srt
 import sys
+import datetime
 
 def merge_srt(subtitle1, subtitle2):
     # 合并两个字幕条目
     return srt.Subtitle(
         index=subtitle1.index,
-        start=subtitle1.start,
-        end=subtitle1.end,
-        content=f"{subtitle1.content}\n{subtitle2.content}",
+        start=min(subtitle1.start, subtitle2.start),
+        end=max(subtitle1.end, subtitle2.end),
+        content=f"<b>{subtitle1.content}</b>\n<i>{subtitle2.content}</i>",
         proprietary='',
     )
 
@@ -24,23 +25,48 @@ def main(srt_file1, srt_file2, output_file):
     subtitles1 = load_srt(srt_file1)
     subtitles2 = load_srt(srt_file2)
 
-    # 确保字幕条目数量相同
-    if len(subtitles1) != len(subtitles2):
-        print("Warning:字幕文件中的条目数量不匹配。会尝试对齐字幕\nFile lengths don't match, will try to merge.")
+    merged_subtitles = []
+    i, j = 0, 0
+    while i < len(subtitles1) and j < len(subtitles2):
+        if subtitles1[i].start - subtitles2[j].end < datetime.timedelta(seconds=1) and \
+           subtitles2[j].start - subtitles1[i].end < datetime.timedelta(seconds=1):
+            merged_subtitle = merge_srt(subtitles1[i], subtitles2[j])
+            
+            if (merged_subtitle.end - merged_subtitle.start) > datetime.timedelta(seconds=7):
+                split_time = (merged_subtitle.start + merged_subtitle.end) / 2
+                merged_subtitles.append(srt.Subtitle(
+                    index=merged_subtitle.index,
+                    start=merged_subtitle.start,
+                    end=split_time,
+                    content=merged_subtitle.content,
+                    proprietary=''
+                ))
+                merged_subtitles.append(srt.Subtitle(
+                    index=merged_subtitle.index,
+                    start=split_time,
+                    end=merged_subtitle.end,
+                    content=merged_subtitle.content,
+                    proprietary=''
+                ))
+            else:
+                merged_subtitles.append(merged_subtitle)
+            i += 1
+            j += 1
+        elif subtitles1[i].start < subtitles2[j].start:
+            merged_subtitles.append(subtitles1[i])
+            i += 1
+        else:
+            merged_subtitles.append(subtitles2[j])
+            j += 1
 
-    base_subtitle, another_subtitle = (subtitles2, subtitles1) if len(subtitles1) > len(subtitles2) else (subtitles1, subtitles2)
+    while i < len(subtitles1):
+        merged_subtitles.append(subtitles1[i])
+        i += 1
+    while j < len(subtitles2):
+        merged_subtitles.append(subtitles2[j])
+        j += 1
 
-    # 合并字幕
-    for i in range(len(base_subtitle)):
-        subtitle = base_subtitle[i]
-        for sub in another_subtitle:
-            if sub.start == subtitle.start and sub.end == subtitle.end:
-                base_subtitle[i].content = sub.content + '\n' + base_subtitle[i].content.replace('\n', ' ')
-                continue
-                
-    
-    # 保存合并后的字幕
-    save_srt(base_subtitle, output_file)
+    save_srt(merged_subtitles, output_file)
     print(f"合并的字幕已保存到 {output_file}\nThe merged subtitle files have been saved to {output_file}")
 
 if __name__ == "__main__":
