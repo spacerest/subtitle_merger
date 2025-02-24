@@ -26,7 +26,7 @@ def main(srt_file1, srt_file2, output_file):
 
     # 确保字幕条目数量相同
     if len(subtitles1) != len(subtitles2):
-        print("Warning:字幕文件中的条目数量不匹配。会尝试对齐字幕")
+        print("Warning:字幕文件中的条目数量不匹配。会尝试对齐字幕\nFile lengths don't match, will try to merge.")
 
     base_subtitle, another_subtitle = (subtitles2, subtitles1) if len(subtitles1) > len(subtitles2) else (subtitles1, subtitles2)
 
@@ -41,7 +41,7 @@ def main(srt_file1, srt_file2, output_file):
     
     # 保存合并后的字幕
     save_srt(base_subtitle, output_file)
-    print(f"合并的字幕已保存到 {output_file}")
+    print(f"合并的字幕已保存到 {output_file}\nThe merged subtitle files have been saved to {output_file}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
